@@ -1,0 +1,548 @@
+\documentclass[12pt]{amsart}
+
+\addtolength{\hoffset}{-2.25cm}
+\addtolength{\textwidth}{4.5cm}
+\addtolength{\voffset}{-2.5cm}
+\addtolength{\textheight}{5cm}
+\setlength{\parskip}{0pt}
+\setlength{\parindent}{15pt}
+
+\usepackage{amsthm}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage[spanish]{babel}
+\usepackage[colorlinks = true, linkcolor = black, citecolor = black, final]{hyperref}
+
+\usepackage{listings}
+\lstset{
+	language=Python,
+	backgroundcolor=\color{gray!25},
+	basicstyle=\small\ttfamily,
+	breaklines=true
+}
+
+\usepackage{graphicx}
+\usepackage{multicol}
+\usepackage{ marvosym }
+\usepackage{wasysym}
+\usepackage{tikz}
+\usetikzlibrary{patterns}
+
+\newcommand{\ds}{\displaystyle}
+\newcommand{\horrule}[1]{\rule{\linewidth}{#1}}
+
+\setlength{\parindent}{0in}
+
+\pagestyle{empty}
+\begin{document}
+	\hrule
+	\smallskip
+	\begin{center}
+		{\scshape {\large Redes de Computadoras} \\
+			Curso 2025-2026} \\ \smallskip
+		\textbf{Clase Práctica \# 7} \\
+		{\small \textbf{Tema:} Protocolo UDP (User Datagram Protocol)}
+	\end{center}
+	\vspace{-8px}
+	\rule{\linewidth}{2pt}
+	
+	{\scshape Facultad de Matemática y Computación}  \hfill {\scshape Universidad de La Habana}
+	
+	\bigskip\bigskip
+	
+	
+	
+	\vspace{1cm}
+	
+	\begin{center}
+		\textit{La única forma de hacer un gran trabajo es amar lo que haces.}
+	\end{center}
+	
+	\begin{flushright}
+		- Steve Jobs
+	\end{flushright}
+	
+	\vspace{1cm}
+	
+	% Ejercicios
+	\begin{enumerate}
+		
+		\thispagestyle{empty}
+		
+		%------------------------------------------------------------%
+		\item \textbf{\textit{Introducción y Contexto}}
+		
+		\medskip
+		UDP (User Datagram Protocol) es un protocolo de la capa de transporte (nivel 4 del modelo TCP/IP) definido en RFC 768. Ofrece un servicio de envío de datagramas sin conexión y con mínima sobrecarga. A diferencia de TCP, no garantiza: entrega, orden, no duplicación ni control de congestión. Su simplicidad lo hace adecuado para aplicaciones donde la latencia y el rendimiento son más importantes que la fiabilidad completa, o donde la aplicación implementa su propia lógica de recuperación.
+
+		\medskip		
+		
+		\begin{table}[ht]
+		\centering
+		\begin{tabular}{|l|l|l|}
+		\hline
+		\textbf{Aspecto} & \textbf{TCP} & \textbf{UDP} \\ 
+		\hline
+		Conexión & Orientado a conexión (handshake) & Sin conexión \\ 
+		\hline
+		Fiabilidad & Garantizada (ACK, retransmisión) & No garantizada \\ 
+		\hline
+		Orden & Ordenado & Puede llegar desordenado \\ 
+		\hline
+		Control de congestión & Sí & No (la aplicación debe manejarlo) \\ 
+		\hline
+		Cabecera & 20 bytes + opciones & 8 bytes \\ 
+		\hline
+		Flujo & Byte-stream & Mensajes (datagramas) \\ 
+		\hline
+		Uso típico & Web, correo, transferencia fiable & Streaming, VoIP, DNS, juegos, telemetría \\ 
+		\hline
+		\end{tabular}
+		\medskip
+		\caption{Comparación entre TCP y UDP}
+		\label{tab:tcp_udp_comparison}
+		\end{table}
+		
+		\bigskip\bigskip
+		%------------------------------------------------------------%
+
+		%------------------------------------------------------------%
+		\item \textbf{\textit{Características de UDP}}
+		\medskip
+
+		\begin{itemize}
+
+		\item \textbf{\textit{Principales características:}}
+
+			\begin{itemize}
+			
+			\item Sin estado de conexión: cada datagrama es independiente.
+
+			\item Baja latencia: no hay handshakes ni ventanas.
+
+			\item Cabecera mínima (8 bytes): menor overhead.
+
+			\item Demultiplexación por puertos (source port, destination port).
+
+			\item Integridad básica mediante checksum (opcional para IPv4, obligatorio para IPv6).
+
+			\item No fragmenta a nivel de transporte; si el datagrama excede MTU la fragmentación ocurre en IP (riesgo de pérdida).
+
+			\item Permite broadcast y multicast de forma natural.
+
+			\end{itemize}
+		
+		\medskip \medskip	
+
+		\item \textbf{\textit{Ventajas:}}
+
+			\begin{itemize}
+			
+			\item Sencillez de implementación.
+
+			\item Apto para patrones uno-a-muchos.
+
+			\item Ideal para tráfico en tiempo real donde llegar tarde equivale a ser inútil.
+
+			\end{itemize}
+
+		\medskip \medskip
+
+		\item \textbf{\textit{Desventajas:}}
+
+			\begin{itemize}
+			
+			\item Pérdidas no recuperadas automáticamente.
+
+			\item Posibles duplicados y reordenamientos.
+
+			\item Sensible a congestión (no reduce tasa automáticamente).
+
+			\item Riesgos de amplificación (ej: ataques DDoS si mal configurado).
+
+			\end{itemize}
+
+		\end{itemize}
+	
+		\bigskip\bigskip
+		%------------------------------------------------------------%
+
+		%------------------------------------------------------------%
+		\item \textbf{\textit{Formato del Datagrama UDP}}
+		
+		\medskip \medskip
+
+		\begin{table}[ht]
+		\centering
+		\caption{\textbf{\textit{Cabecera fija de 8 bytes:}}}
+		\begin{tabular}{|c|c|}
+		\hline
+		bit 0-15 & bit 16-31 \\ 
+		\hline
+		\textbf{Src Port} & \textbf{Dst Port} \\
+		\hline
+		\textbf{Length} & \textbf{Checksum} \\
+		\hline
+		\multicolumn{2}{|c|}{\textbf{\textit{Payload(Datos) ...}}} \\
+		\hline
+		\end{tabular}
+		\label{tab:data_packet}
+		\end{table}
+
+		\noindent \textbf{Campos:}
+		\begin{itemize}
+		\item Source Port (16 bits): puerto origen (puede ser 0 si no se necesita respuesta).
+		\item Destination Port (16 bits): puerto destino en el host receptor.
+		\item Length (16 bits): longitud total (cabecera + datos) en bytes.
+		\item Checksum (16 bits): verificación sobre pseudo-cabecera IP + cabecera UDP + datos.
+		\end{itemize}
+		
+		\medskip \medskip		
+
+		\noindent \textbf{Pseudo-cabecera para checksum:}
+
+		\medskip
+
+		Incluye: dirección IP origen, dirección IP destino, protocolo (17 para UDP) y longitud UDP. Se usa para detectar corrupción de datos o entrega en host incorrecto. Si el checksum se calcula como 0, en IPv4 se puede enviar como 0 (sin checksum); en IPv6 nunca debe ser 0.
+		
+		\bigskip\bigskip
+		%------------------------------------------------------------%
+
+		%------------------------------------------------------------%
+		\item \textbf{\textit{Puertos y Demultiplexación}}
+		
+		\medskip
+		Los puertos identifican procesos receptores. El sistema operativo mantiene tablas para entregar datagramas según (IP destino, puerto destino) e incluso (IP origen, puerto origen) si se desea filtrado adicional.
+		
+		\medskip \medskip	
+
+		\noindent \textbf{\textit{Rangos de puertos:}}
+		
+		\medskip \medskip		
+
+		\begin{itemize}
+		\item 0-1023: Puertos bien conocidos (HTTP 80, DNS 53, NTP 123, etc.).
+		\item 1024-49151: Puertos registrados.
+		\item 49152-65535: Puertos efímeros/dinámicos (asignados automáticamente a clientes).
+		\end{itemize}
+		
+		\medskip \medskip
+
+		\noindent \textbf{\textit{Demultiplexación:}} 
+
+		\medskip \medskip
+
+		Cuando llega un datagrama, el kernel lee el puerto destino y dirige el datagrama al socket que está enlazado (bind) a ese puerto. Con `SO\_REUSEPORT` (Linux) múltiples sockets pueden escuchar el mismo puerto para balanceo.
+		
+		\bigskip\bigskip
+		%------------------------------------------------------------%
+
+		%------------------------------------------------------------%
+		\item \textbf{\textit{Sockets UDP en el Sistema Operativo}}
+		
+		\medskip
+		Crear un socket UDP implica especificar familia (AF\_INET/AF\_INET6), tipo (SOCK\_DGRAM) y protocolo (IPPROTO\_UDP). No se realiza \textbf{connect()} obligatoriamente; se puede usar \textbf{sendto()} y \textbf{recvfrom()} directamente. \textbf{connect()} en UDP fija pares por defecto para evitar pasar dirección cada vez y filtra datagramas de otros orígenes.
+		
+		\medskip \medskip	
+
+		\noindent \textbf{\textit{Operaciones comunes:}}
+		
+		\medskip \medskip		
+
+		\begin{itemize}
+		\item \textbf{socket()}
+		\item \textbf{bind()} para asignar puerto local
+		\item \textbf{sendto()} / \textbf{recvfrom()}
+		\item	\textbf{connect()} (opcional) + \textbf{send()} / \textbf{recv()}
+		\item \textbf{setsockopt()} para opciones: \textbf{SO\_BROADCAST}, TTL (\textbf{IP\_MULTICAST\_TTL}), unir grupo multicast (\textbf{IP\_ADD\_MEMBERSHIP}).
+		\end{itemize}
+		
+		\medskip \medskip
+
+		\noindent \textbf{\textit{Buffering:}} 
+		
+		\medskip \medskip
+		
+		El kernel mantiene buffers de recepción; si se llenan, los datagramas se descartan. No hay control de flujo.
+
+		\medskip \medskip
+		
+		\bigskip\bigskip
+		%------------------------------------------------------------%
+		
+		%------------------------------------------------------------%
+		\item \textbf{\textit{Modelo Cliente-Servidor con UDP}}
+		
+		\medskip
+		Patrón típico: servidor escucha en un puerto conocido, clientes envían datagramas y el servidor responde al puerto efímero del cliente.
+		
+		\medskip \medskip
+
+		\noindent \textbf{Ejemplo conceptual:}
+		\medskip \medskip		
+		\begin{itemize}
+		\item Servidor crea socket UDP y hace \textbf{bind} al puerto 9999.
+		\item Cliente crea socket UDP sin \textbf{bind} explícito (kernel asigna puerto efímero) y envía un datagrama a `ip-servidor:9999' .
+		\item Servidor recibe, procesa y responde usando dirección y puerto origen del datagrama.
+		\item	No existe estado persistente de conexión: cada datagrama se maneja independiente.
+		\end{itemize}
+		
+		\medskip \medskip
+
+		\noindent \textbf{\textit{Desafíos:}}
+		\medskip \medskip		
+		\begin{itemize}
+		\item No hay confirmación automática: implementar ACK a nivel aplicación si se requiere.
+		\item Tiempos de espera: usar timeouts (\textbf{settimeout}) para no bloquear indefinidamente.
+		\item Seguridad: validar tamaño y origen de datos.
+		\end{itemize}
+		
+		\bigskip\bigskip
+		%------------------------------------------------------------%
+		
+		%------------------------------------------------------------%
+		\item \textbf{\textit{Broadcast y Multicast}}
+		
+		\medskip
+		\noindent \textbf{\textit{Broadcast}}
+		
+		\medskip \medskip
+		
+		Permite enviar un datagrama a todos los hosts de una red local. Se usa dirección broadcast (ej: 192.168.1.255 para /24). Requiere habilitar opción \textbf{SO\_BROADCAST} en el socket. No atraviesa routers (generalmente bloqueado o limitado) por su potencial de congestión.
+
+		Usualmente se utiliza en el descubrimiento de servicios (ej: DHCP DISCOVER),y anuncios locales.
+
+		\medskip \medskip
+
+		\noindent \textbf{\textit{Multicast}}
+		
+		\medskip \medskip
+		En multicast se envía a un grupo (dirección entre 224.0.0.0 y 239.255.255.255 en IPv4). Los hosts interesados se suscriben (join) al grupo usando `IP\_ADD\_MEMBERSHIP'. El tráfico se replica eficientemente sólo a redes donde hay receptores. En IPv6 se usa FF00::/8.
+		
+		\medskip \medskip
+		\noindent \textbf{Ventajas sobre broadcast:}
+
+		\medskip \medskip
+
+		\begin{itemize}
+		\item Más eficiente: no todos los hosts reciben el paquete, sólo suscritos.
+		\item Escalable: routers pueden gestionar distribución.
+		\end{itemize}
+
+		\medskip \medskip
+
+		Ejemplos de uso: streaming en vivo, distribución de precios de bolsa, protocolos de routing (OSPF usa multicast), descubrimiento (mDNS).
+
+		\medskip \medskip
+		
+		\noindent \textbf{Parámetros clave:}
+
+		\medskip \medskip
+
+		\begin{itemize}
+		\item TTL (Time To Live) multicast: controla alcance.
+		\item Loopback local: puede habilitarse/deshabilitarse (`IP\_MULTICAST\_LOOP').
+		\end{itemize}
+
+		\bigskip\bigskip
+		%------------------------------------------------------------%
+
+		%------------------------------------------------------------%
+		\item \textbf{\textit{Ejemplos de Código (Python)}}
+		\medskip
+
+		\noindent \textbf{Servidor UDP simple (eco)}
+		\medskip \medskip
+		\begin{lstlisting}
+import socket
+
+HOST = '0.0.0.0'
+PORT = 9999
+
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+sock.bind((HOST, PORT))
+print(f'Servidor UDP escuchando en {HOST}:{PORT}')
+
+while True:
+	data, addr = sock.recvfrom(4096)
+	print(f'Recibido {data!r} de {addr}')
+	# Eco
+	sent = sock.sendto(data, addr)
+	print(f'Devueltos {sent} bytes')
+		\end{lstlisting}
+
+		\medskip \medskip
+
+		\noindent \textbf{Cliente UDP}
+		\medskip \medskip
+		\begin{lstlisting}
+import socket
+
+SERVER = '127.0.0.1'
+PORT = 9999
+
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+mensaje = b'Hola UDP'
+sock.sendto(mensaje, (SERVER, PORT))
+data, _ = sock.recvfrom(4096)
+print('Respuesta:', data.decode())
+		\end{lstlisting}
+
+		\medskip \medskip
+
+		\noindent \textbf{Broadcast (descubrimiento)}
+		\medskip \medskip
+		\begin{lstlisting}
+import socket
+
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+
+mensaje = b'DESCUBRIR_SERVIDOR'
+broadcast_addr = ('255.255.255.255', 50000) # U otra red p ej. 192.168.12.255
+sock.sendto(mensaje, broadcast_addr)
+
+# Escuchar respuesta (opcional timeout)
+sock.settimeout(3)
+try:
+	data, addr = sock.recvfrom(4096)
+	print('Servidor encontrado en', addr, '=>', data)
+except socket.timeout:
+	print('No hay respuesta')
+		\end{lstlisting}
+
+		\medskip \medskip
+
+		\noindent \textbf{Multicast (receptor)}
+		\medskip \medskip
+		\begin{lstlisting}
+import socket
+import struct
+
+MCAST_GRP = '239.255.0.1'
+PORT = 60000
+
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+sock.bind(('', PORT))  # Escucha en todos los interfaces
+
+# Unirse al grupo
+mreq = struct.pack('4s4s', socket.inet_aton(MCAST_GRP), socket.inet_aton('0.0.0.0'))
+sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+print(f'Escuchando multicast {MCAST_GRP}:{PORT}')
+
+while True:
+	data, addr = sock.recvfrom(65535)
+	print('Multicast desde', addr, ':', data)
+		\end{lstlisting}
+
+		\medskip \medskip
+
+		\noindent\textbf{Multicast (emisor)}
+		\medskip \medskip
+		\begin{lstlisting}
+import socket
+import time
+
+MCAST_GRP = '239.255.0.1'
+PORT = 60000
+
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+ttl = 1  # alcance local
+sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
+
+for i in range(5):
+	msg = f'MSG {i}'.encode()
+	sock.sendto(msg, (MCAST_GRP, PORT))
+	print('Enviado', msg)
+	time.sleep(1)
+		\end{lstlisting}
+
+		\bigskip \bigskip
+		%------------------------------------------------------------%
+
+		%------------------------------------------------------------%
+		\item \textbf{\textit{Casos de Uso y Patrones}}
+		\medskip
+		\begin{itemize}
+		\item DNS: rapidez > fiabilidad total (reintentos controlados por aplicación).
+		\item Streaming de audio/video: pérdidas menores aceptables.
+		\item Juegos en línea: actualizaciones frecuentes de estado.
+		\item Telemetría/sensores: datagramas periódicos pequeños.
+		\item Protocolos de descubrimiento: broadcast/multicast.
+		\end{itemize}
+
+		\medskip \medskip 
+
+		\noindent \textbf{Patrones de fiabilidad sobre UDP:}
+		\medskip \medskip
+		\begin{itemize}
+		\item ACK + retransmisión (similar a TFTP).
+		\item Números de secuencia para orden.
+		\item FEC (Forward Error Correction) para recuperación sin retransmisión.
+		\item Rate limiting manual para evitar congestión.
+		\end{itemize}
+
+		\bigskip \bigskip
+		%------------------------------------------------------------%
+		
+		%------------------------------------------------------------%
+		\item \textbf{\textit{Buenas Prácticas y Consideraciones}}
+		\medskip
+		\begin{itemize}
+		\item Limitar tamaño de datagramas (MTU  \textless ~1500 bytes) para evitar fragmentación IP.
+		\item Implementar timeouts y reintentos con backoff exponencial.
+		\item Validar longitud de datos antes de procesar.
+		\item Usar autenticación/integridad (HMAC) si se requiere seguridad básica.
+		\item Evitar usar broadcast innecesariamente.
+		\item Monitorizar pérdida y latencia (contadores y timestamps en payload).
+		\item Considerar QUIC (sobre UDP) si se necesita fiabilidad + baja latencia moderna.
+		\end{itemize}
+
+		\bigskip \bigskip
+		%------------------------------------------------------------%
+
+		%------------------------------------------------------------%
+		\item \textbf{\textit{Ejercicios y Preguntas de Discusión}}
+		\medskip
+		\begin{enumerate}
+		\item Implementa un servidor de eco UDP y mide cuántos datagramas por segundo soporta en tu máquina.
+		\item Modifica el cliente para enviar 1000 datagramas y contabiliza pérdidas (usa números de secuencia).
+		\item Diseña un pequeño protocolo confiable sobre UDP con ACK y retransmisión. ¿Qué problemas aparecen?
+		\item Implementa un chat local usando broadcast. ¿Qué limitaciones tiene?
+		\item Únete a un grupo multicast y analiza con \textbf{tcpdump} o \textbf{wireshark} los paquetes recibidos. ¿Qué sucede si cambias TTL?
+		\item Discute: ¿Por qué DNS usa UDP la mayoría de las veces? ¿Cuándo usa TCP?
+		\item Compara el overhead de enviar 1000 mensajes cortos por UDP vs TCP (estima cabeceras). ¿Cuándo conviene cada uno?
+		\end{enumerate}
+		
+		\medskip \medskip
+
+		\noindent \textbf{Preguntas rápidas (quiz):}
+		\medskip \medskip
+		\begin{itemize}
+		\item ¿Qué campo de la cabecera UDP permite detectar corrupción? (Checksum)
+		\item ¿Cuál es el tamaño mínimo de cabecera UDP? (8 bytes)
+		\item ¿Qué ocurre si un datagrama UDP llega con checksum incorrecto? (Se descarta)
+		\item ¿Se garantiza el orden de llegada? (No)
+		\item ¿Qué opción se requiere para enviar broadcast en un socket? (`SO\_BROADCAST')
+		\end{itemize}
+
+		\bigskip \bigskip
+		%------------------------------------------------------------%
+
+		%------------------------------------------------------------%
+		\item \textbf{\textit{Referencias}}
+		\medskip
+		\begin{itemize}
+		\item RFC 768 - User Datagram Protocol.
+		\item RFC 1122 - Requirements for Internet Hosts.
+		\item Stevens, W. Richard. `TCP/IP Illustrated Vol. 1'.
+		\item RFC 1112 - Host Extensions for IP Multicasting.
+		\end{itemize}
+
+		\bigskip \bigskip
+		%------------------------------------------------------------%
+
+	\end{enumerate}	
+
+\end{document}

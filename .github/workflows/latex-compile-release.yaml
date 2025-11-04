@@ -1,0 +1,49 @@
+name: latex-compile-release
+run-name: ${{ github.actor }} is making a new release
+
+on: [workflow_dispatch, push]
+
+jobs:
+  main:
+     runs-on: ubuntu-latest
+     steps:
+        
+        - name: Checkout repository
+          uses: actions/checkout@v5
+          
+        - name: Compile LaTeX
+          uses: xu-cheng/latex-action@v3
+          with:
+            root_file: |
+              **/*.tex
+        
+        - name: Create folder 
+          run: mkdir release
+        
+        - name: Copy compiled pdfs to release folder
+          run: cp *.pdf release
+          
+        - name: Copy cp folders content to release
+          run: cp -r cp*/ release
+        
+        - name: Create ZIP archive of PDFs
+          run: zip -r release.zip release/
+        
+        - name: Create release
+          id: create_release
+          uses: actions/create-release@v1
+          env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          with:
+            tag_name: ${{ github.ref_name }}.${{ github.run_number }}
+            release_name: Release ${{ github.ref_name }}.${{ github.run_number }}
+            
+        - name: Upload release assets
+          uses: actions/upload-release-asset@v1
+          env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          with:
+            upload_url: ${{ steps.create_release.outputs.upload_url }}
+            asset_path: ./release.zip
+            asset_name: release.zip
+            asset_content_type: application/zip

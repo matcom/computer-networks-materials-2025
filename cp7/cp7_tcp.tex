@@ -1,0 +1,438 @@
+\documentclass[12pt]{amsart}
+
+\addtolength{\hoffset}{-2.25cm}
+\addtolength{\textwidth}{4.5cm}
+\addtolength{\voffset}{-2.5cm}
+\addtolength{\textheight}{5cm}
+\setlength{\parskip}{0pt}
+\setlength{\parindent}{15pt}
+
+\usepackage{amsthm}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage[spanish]{babel}
+\usepackage[colorlinks = true, linkcolor = black, citecolor = black, final]{hyperref}
+
+\usepackage{listings}
+\lstset{
+	language=Python,
+	backgroundcolor=\color{gray!25},
+	basicstyle=\small\ttfamily,
+	breaklines=true
+}
+
+\usepackage{graphicx}
+\usepackage{multicol}
+\usepackage{ marvosym }
+\usepackage{wasysym}
+\usepackage{tikz}
+\usetikzlibrary{patterns}
+
+\newcommand{\ds}{\displaystyle}
+\newcommand{\horrule}[1]{\rule{\linewidth}{#1}}
+
+\setlength{\parindent}{0in}
+
+\pagestyle{empty}
+\begin{document}
+	\hrule
+	\smallskip
+	\begin{center}
+		{\scshape {\large Redes de Computadoras} \\
+			Curso 2025-2026} \\ \smallskip
+		\textbf{Clase Práctica \# 7} \\
+		{\small \textbf{Tema:} Protocolo TCP (Transmission Control Protocol)}
+	\end{center}
+	\vspace{-8px}
+	\rule{\linewidth}{2pt}
+	
+	{\scshape Facultad de Matemática y Computación}  \hfill {\scshape Universidad de La Habana}
+	
+	\bigskip\bigskip
+	
+	
+	
+	\vspace{1cm}
+	
+	\begin{center}
+		\textit{La única forma de hacer un gran trabajo es amar lo que haces.}
+	\end{center}
+	
+	\begin{flushright}
+		- Steve Jobs
+	\end{flushright}
+	
+	\vspace{1cm}
+	
+	% Ejercicios
+	\begin{enumerate}
+		
+		\thispagestyle{empty}
+		
+		%------------------------------------------------------------%
+		\item \textbf{\textit{Introducción y Características}}
+		
+		\medskip
+		TCP es un protocolo de la capa de transporte denido en RFC 793 que ofrece servicio orientado a conexión,
+confiable y de fujo de bytes ordenado.
+		\medskip \medskip
+		
+		\noindent \textbf{Características principales:}
+
+		\begin{itemize}
+			
+		\item \textbf{Orientado a conexión}: requiere establecimiento y cierre ordenado
+
+		\item \textbf{Fiabilidad garantizada:} ACK, retransmisiones, checksum
+
+		\item \textbf{Control de flujo:} ventana deslizante para evitar saturación
+
+		\item \textbf{Control de congestión:} algoritmos para evitar colapso de red
+
+		\item \textbf{Entrega ordenada:} números de secuencia para reensamblaje
+
+		\item \textbf{Comunicación full-duplex:} transmisión bidireccional simultánea
+
+		\end{itemize}
+		
+		\medskip \medskip
+
+		\begin{table}[ht]
+		\centering
+		\begin{tabular}{|l|l|l|}
+		\hline
+		\textbf{Aspecto} & \textbf{TCP} & \textbf{UDP} \\ 
+		\hline
+		Conexión & Orientado a conexión & Sin conexión \\ 
+		\hline
+		Fiabilidad & Garantizada & No garantizada \\ 
+		\hline
+		Orden & Ordenado & Puede llegar desordenado \\ 
+		\hline
+		Control de congestión & Sí & No \\ 
+		\hline
+		Cabecera & 20 bytes a 60 bytes & 8 bytes \\ 
+		\hline
+		Overhead & Alto & Mínimo \\
+		\hline
+		\end{tabular}
+		\medskip
+		\caption{Comparación entre TCP y UDP}
+		\label{tab:tcp_udp_comparison}
+		\end{table}
+
+		\bigskip\bigskip
+		%------------------------------------------------------------%
+
+		%------------------------------------------------------------%
+		\item \textbf{\textit{ Formato del Segmento TCP}}
+		
+		\medskip
+		Cabecera TCP (mínimo 20 bytes, hasta 60 con opciones):
+		
+		\medskip \medskip
+
+		\begin{table}[ht]
+		\centering
+		\begin{tabular}{|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|}
+		\hline
+		\multicolumn{8}{|c|}{0} & \multicolumn{8}{|c|}{1} & \multicolumn{8}{|c|}{2} & \multicolumn{8}{|c|}{3} \\
+		\hline
+		0 & 1 & 2 & 3 & 4 & 5 & 6 & 7 & 0 & 1 & 2 & 3 & 4 & 5 & 6 & 7 & 0 & 1 & 2 & 3 & 4 & 5 & 6 & 7 & 0 & 1 & 2 & 3 & 4 & 5 & 6 & 7 \\
+		\hline
+		\multicolumn{16}{|c|}{\textbf{Source Port}} & \multicolumn{16}{|c|}{\textbf{Destination Port}} \\
+		\hline
+		\multicolumn{32}{|c|}{\textbf{Sequence Number}} \\
+		\hline
+		\multicolumn{32}{|c|}{\textbf{Acknowledgment Number}} \\
+		\hline
+		\multicolumn{5}{|c|}{Data offset} & \multicolumn{6}{|c|}{Reserved} & \multicolumn{5}{|c|}{\begin{tabular}{c|c|c|c|c|c} U&A&P&R&S&F \\ R&C&S&S&Y&I \\ G&K&H&T&N&N \\\end{tabular}} & \multicolumn{16}{|c|}{Window}  \\
+		\hline
+		\multicolumn{16}{|c|}{\textbf{Checksum}} & \multicolumn{16}{|c|}{\textbf{Urgent pointer}} \\
+		\hline
+		\multicolumn{27}{|c|}{\textbf{Options(0-40 bytes)}} & \multicolumn{5}{|c|}{\textbf{Padding}} \\
+		\hline
+		\end{tabular}
+		\caption{Cabecera (Header) de un paquete TCP}
+		\label{tab:tcp_packet}
+		\end{table}
+		
+		\medskip \medskip		
+
+		\noindent \textbf{Campos Principales:}
+		\begin{itemize}
+		\item \textbf{Puertos origen/destino:} identican aplicaciones
+		\item \textbf{Número de secuencia:} posición del primer byte en el ujo
+		\item \textbf{Número de ACK:} próximo byte esperado
+		\item \textbf{Longitud de cabecera:} en palabras de 32 bits (mínimo 5)
+		\item \textbf{Flags de control:} URG, ACK, PSH, RST, SYN, FIN
+		\item \textbf{Ventana:} tamaño de ventana de recepción
+		\item \textbf{Checksum:} vericación de integridad
+		\end{itemize}
+		
+		\bigskip\bigskip
+		%------------------------------------------------------------%
+
+		%------------------------------------------------------------%
+		\item \textbf{\textit{Establecimiento y Cierre de Conexión}}
+		
+		\medskip
+		\noindent \textbf{3-Way Handshake (Establecimiento)}
+		\medskip
+		\begin{verbatim}
+Cliente         Servidor
+SYN seq=x  -->
+           <--  SYN seq=y, ACK=x+1
+ACK y+1    -->
+		\end{verbatim}
+
+		\medskip \medskip
+		\noindent \textbf{Estados TCP}
+		\medskip
+		\begin{itemize}
+		\item \textbf{Cliente}: CLOSED $\rightarrow$ SYN\_SENT $\rightarrow$ ESTABLISHED
+		\item \textbf{Servidor}: CLOSED $\rightarrow$ LISTEN $\rightarrow$ SYN\_RCVD $\rightarrow$ ESTABLISHED
+		\end{itemize}
+	
+		\medskip \medskip
+		\noindent \textbf{4-Way Handshake (Cierre)}
+		\medskip
+		\begin{verbatim}
+Un extremo	     Otro extremo
+FIN seq=x  -->
+           <--  ACK x+1
+           <--  FIN seq=y
+ACK y+1    -->
+		\end{verbatim}
+
+		\noindent \textbf{TIME\_WAIT:} Espera de 2*MSL para evitar problemas con segmentos duplicados.
+		
+		\bigskip\bigskip
+		%------------------------------------------------------------%
+
+		%------------------------------------------------------------%
+		\item \textbf{\textit{Mecanismos de Fiabilidad}}
+		
+		\medskip \medskip
+		\noindent \textbf{Números de Secuencia y ACK}
+		\medskip
+		\begin{itemize}
+		\item Cada byte transmitido tiene un número de secuencia
+		\item ACK indica el próximo byte esperado (conrmación acumulativa)
+		\end{itemize}
+
+		\medskip \medskip		
+
+		\noindent \textbf{Retransmisiones}
+		\medskip
+		\begin{itemize}
+		\item \textbf{Timeout basado en RTT:} Estimación dinámica del Round-Trip Time
+		\item \textbf{Fast Retransmit:} Retransmisión tras 3 ACK duplicados
+		\end{itemize}
+		
+		\bigskip\bigskip
+		%------------------------------------------------------------%
+		
+		%------------------------------------------------------------%
+		\item \textbf{\textit{Control de Flujo: Ventana Deslizante}}
+		
+		\medskip
+		El receptor anuncia cuántos bytes puede aceptar (campo Window)
+		
+ 		\medskip \medskip
+		\begin{itemize}
+		\item \textbf{Ventana de congestión (cwnd):} Limitación por congestión de red
+		\item \textbf{Ventana de recepción (rwnd):} Limitación por buffer del receptor
+		\item \textbf{Ventana efectiva} = min(cwnd, rwnd)
+		\end{itemize}
+		
+		\bigskip\bigskip
+		%------------------------------------------------------------%
+		
+		%------------------------------------------------------------%
+		\item \textbf{\textit{Control de Congestión}}
+		
+		\medskip
+		\noindent \textbf{Algoritmos Principales}
+		
+ 		\medskip \medskip
+
+		\noindent \textbf{Slow Start}
+		\begin{itemize}
+		\item cwnd(Ventana de congestión) comienza en 1 MSS
+		\item Duplica cwnd por cada RTT (incremento exponencial)
+		\end{itemize}
+
+		\medskip \medskip
+
+		\noindent \textbf{Congestion Avoidance:}
+		\begin{itemize}
+		\item Incremento aditivo: cwnd += 1 MSS por RTT
+		\end{itemize}
+		
+		\medskip \medskip
+
+		\noindent \textbf{Recuperación:}
+		\begin{itemize}
+		\item \textbf{Timeout:} ssthresh = cwnd/2, cwnd = 1 MSS
+		\item \textbf{Fast Recovery:} ssthresh = cwnd/2, cwnd = ssthresh + 3 MSS
+		\end{itemize}
+		
+		
+		\bigskip\bigskip
+		%------------------------------------------------------------%
+
+		%------------------------------------------------------------%
+		\item \textbf{\textit{Herramientas de Diagnóstico}}
+		
+		\medskip
+		\noindent Comando ss -tulpn
+		
+ 		\medskip \medskip
+
+		\begin{lstlisting}
+# Mostrar conexiones TCP
+ss -tulpn
+# Ejemplos practicos
+ss -tlnp | grep :80 # Ver quien escucha en puerto 80
+ss -t state established # Conexiones establecidas
+ss -t state time-wait # Conexiones en TIME_WAIT
+		\end{lstlisting}
+
+		\medskip \medskip
+		\noindent \textbf{Interpretación:}
+		\medskip
+		\begin{itemize}
+		\item \textbf{Recv-Q/Send-Q:} Datos en cola de recepción/envío
+		\item \textbf{Estado LISTEN:} Servidores esperando conexiones
+		\item \textbf{Estado ESTAB:} Conexiones establecidas
+		\end{itemize}
+		
+		\bigskip\bigskip
+		%------------------------------------------------------------%
+
+		%------------------------------------------------------------%
+		\item \textbf{\textit{Análisis con Wireshark}}
+		
+		\medskip
+		\noindent Filtros útiles:
+		
+ 		\medskip \medskip
+
+		\begin{lstlisting}
+tcp.port == 80 # Trafico en puerto 80
+tcp.flags.syn == 1 # Segmentos SYN
+tcp.analysis.retransmission # Retransmisiones
+tcp.window\_size < 100 # Ventanas pequenas
+		\end{lstlisting}
+
+		\medskip \medskip
+		\noindent Métricas importantes:
+		\medskip
+		\begin{itemize}
+		\item \textbf{RTT:} Tiempo entre envío y ACK
+		\item \textbf{Throughput:} Datos transferidos por tiempo
+		\item \textbf{Pérdida de paquetes:} Retransmisiones
+		\end{itemize}
+		
+		\bigskip\bigskip
+		%------------------------------------------------------------%
+
+		%------------------------------------------------------------%
+		\item \textbf{\textit{Implementación de Servidores}}
+		
+		\medskip
+		\noindent Servidor TCP Multithread
+		\medskip \medskip
+		\begin{lstlisting}
+import socket
+import threading
+def handle_client(conn, addr):
+	print(f"Conexion desde {addr}")
+	with conn:
+		while True:
+			data = conn.recv(1024)
+			if not data:
+				break
+			conn.sendall(data) # Echo server
+
+def server():
+	HOST, PORT = '0.0.0.0', 8080
+	with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+		s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+		s.bind((HOST, PORT))
+		s.listen(5)
+		print(f"Servidor en {HOST}:{PORT}")
+
+		while True:
+			conn, addr = s.accept()
+			thread = threading.Thread(target=handle_client, args=(conn,addr))
+			thread.start()
+		\end{lstlisting}
+
+		\medskip \medskip
+
+		\noindent \textbf{Cliente de prueba}
+		\medskip \medskip
+		\begin{lstlisting}
+import socket
+
+def cliente():
+	HOST, PORT = '127.0.0.1', 8080
+	with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+		s.connect((HOST, PORT))
+		s.sendall(b"Hola servidor TCP")
+		data = s.recv(1024)
+		print(f"Recibido: {data.decode()}")
+		\end{lstlisting}
+
+		\bigskip \bigskip
+		%------------------------------------------------------------%
+		
+		%------------------------------------------------------------%
+		\item \textbf{\textit{Casos de Uso y Mejores Prácticas}}
+		
+		\medskip
+		\noindent Aplicaciones típicas:
+		\medskip \medskip
+		\begin{itemize}
+		\item Transferencia web (HTTP/HTTPS)
+		\item Correo electrónico (SMTP, IMAP, POP3)
+		\item Transferencia de archivos (FTP, SFTP)
+		\item Terminal remoto (SSH)
+		\item Bases de datos
+		\end{itemize}
+		
+		\bigskip\bigskip
+		%------------------------------------------------------------%
+
+		%------------------------------------------------------------%
+		\item \textbf{\textit{Preguntas}}
+		
+		\medskip
+		\noindent Preguntas de Discusión:
+		\medskip \medskip
+		\begin{itemize}
+		\item ¿Por qué TCP necesita un handshake de 3 vías en lugar de 2?
+		\item ¿Qué problemas resuelve el estado TIME-WAIT?
+		\item ¿Cómo afecta el RTT al throughput máximo?
+		\item ¿Cuándo es preferible usar I/O multiplexado sobre hilos?
+		\item ¿Qué ventajas tiene ACK selectivo (SACK) sobre ACK acumulativo?
+		\end{itemize}
+
+		\medskip \medskip
+		\noindent Preguntas Rápidas:
+		\medskip \medskip
+		\begin{itemize}
+		\item ¿Qué flag indica establecimiento de conexión? (SYN)
+		\item ¿Qué campo controla el fujo? (Window)
+		\item ¿Cuántos bytes tiene la cabecera TCP mínima? (20 bytes)
+		\item ¿Qué indica un ACK con número 1001? (Se recibieron bytes 1-1000)
+		\end{itemize}
+		
+		\bigskip\bigskip
+		%------------------------------------------------------------%
+
+	\end{enumerate}	
+
+\end{document}

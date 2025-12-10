@@ -1,0 +1,145 @@
+\documentclass[12pt]{amsart}
+
+\addtolength{\hoffset}{-2.25cm}
+\addtolength{\textwidth}{4.5cm}
+\addtolength{\voffset}{-2.5cm}
+\addtolength{\textheight}{5cm}
+\setlength{\parskip}{0pt}
+\setlength{\parindent}{15pt}
+
+\usepackage{amsthm}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage[spanish]{babel}
+\usepackage[colorlinks = true, linkcolor = black, citecolor = black, final]{hyperref}
+
+\usepackage{listings}
+\lstset{
+	language=Python,
+	backgroundcolor=\color{gray!25},
+	basicstyle=\small\ttfamily,
+	breaklines=true
+}
+
+\usepackage{graphicx}
+\usepackage{multicol}
+\usepackage{ marvosym }
+\usepackage{wasysym}
+\usepackage{tikz}
+\usetikzlibrary{patterns}
+
+\newcommand{\ds}{\displaystyle}
+\newcommand{\horrule}[1]{\rule{\linewidth}{#1}}
+
+\setlength{\parindent}{0in}
+
+\pagestyle{empty}
+\begin{document}
+	\hrule
+	\smallskip
+	\begin{center}
+		{\scshape {\large Redes de Computadoras} \\
+			Curso 2025-2026} \\ \smallskip
+		\textbf{Clase Práctica \# 3} \\
+		{\small \textbf{Tema:} orrección y Detección de errores. Códigos de Hamming y CRC}
+	\end{center}
+	\vspace{-8px}
+	\rule{\linewidth}{2pt}
+	
+	{\scshape Facultad de Matemática y Computación}  \hfill {\scshape Universidad de La Habana}
+	
+	\bigskip\bigskip
+	
+	
+	
+	\vspace{1cm}
+	
+	\begin{center}
+		\textit{La única forma de hacer un gran trabajo es amar lo que haces.}
+	\end{center}
+	
+	\begin{flushright}
+		- Steve Jobs
+	\end{flushright}
+	
+	\vspace{1cm}
+	
+	% Ejercicios
+	\begin{enumerate}
+		
+		\thispagestyle{empty}
+		
+		%------------------------------------------------------------%
+		\item \textbf{\textit{Códigos de Hamming}}
+		
+		\medskip
+		El código Hamming es un sistema de corrección de errores que puede detectar y corregir errores cuando se almacenan o transmiten datos. Requiere agregar bits de paridad adicionales con los datos.
+
+		\medskip
+		Los bits redundantes son bits binarios adicionales que se generan y agregan a los bits de transferencia de datos que transportan información para garantizar que no se pierdan bits durante la transferencia de datos. El número de bits redundantes se puede calcular mediante la siguiente fórmula:
+
+	
+		\medskip
+		$ 2^r \geq r + m + 1 $
+
+		\medskip
+		donde m es el número de bits en los datos de entrada y r es el número de bits redundantes.
+
+		\medskip
+		\textbf{Algoritmo}
+
+		\medskip
+		\begin{enumerate}
+		\item Escribir las posiciones de los bits a partir de 1 en forma binaria.
+		
+		\item Todas las posiciones de bits que son una potencia de 2 se marcan como bits de paridad (1, 2, 4, 8, etc.), y las demás posiciones de bits se marcan como bits de datos.
+		
+		\item  Cada bit de datos se incluye en un conjunto único de bits de paridad, según se determina su posición de bit en forma binaria(cada bit de paridad cubre todos los bits donde el AND bit a bit de la posición de paridad y la posición del bit son distintos de cero).
+
+		\item Dado que se verifica la paridad par, se establece un bit de paridad en 1 si el número total de unos en las posiciones que verifica es impar, en caso contrario un bit de paridad en 0.
+		\end{enumerate}
+
+		\medskip
+		\textbf{Ejercicio}
+
+		Supongamos que la palabra de código Hamming de 12 bits consta de datos de 8 bits y 4 bits de verificación, donde los bits de datos y los bits de verificación se proporcionan en las siguientes tablas. ¿Cuáles son los valores correctos para x e y?
+
+		\includegraphics{images/image2.png}
+		
+		\includegraphics{images/image1.jpg}
+
+		\bigskip\bigskip
+		%------------------------------------------------------------%
+
+		%------------------------------------------------------------%
+		\item \textbf{\textit{Código CRC}}
+		
+		\medskip
+		CRC (Cyclic Redundancy Check) es un método para detectar cambios/errores accidentales en el canal de comunicación. CRC utiliza un polinomio generador que está disponible tanto en el lado del remitente como en el del receptor.
+
+		\medskip
+		Para el uso del algoritmo se requieren de dos variables fundamentales
+		\begin{itemize}
+		\item n: Número de bits de los datos a enviar
+		
+		\item k: Número de bits en la llave obtenida a partir del polinomio generador
+		\end{itemize}
+
+		\medskip
+		\textbf{Lado del remitente (generación de datos codificados a partir de datos y polinomio generador (o llave)):}
+		\begin{enumerate}
+		\item Los datos binarios se aumentan agregando k-1 ceros al final de los datos.
+		\item Se utiliza la división binaria de módulo 2 para dividir datos binarios por la clave y almacenar el resto de la división.
+		\item Se agrega el resto al final de los datos para formar los datos codificados y enviarlos.
+		\end{enumerate}
+
+		\medskip
+		\textbf{Lado del receptor (comprobar si se produjeron errores en la transmisión):}
+		Se realiza la división de módulo 2 nuevamente y si el resto es 0, entonces no hay errores.
+
+		\bigskip\bigskip
+		%------------------------------------------------------------%
+
+	\end{enumerate}	
+
+\end{document}

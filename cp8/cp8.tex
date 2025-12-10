@@ -1,0 +1,229 @@
+\documentclass[12pt]{amsart}
+
+\addtolength{\hoffset}{-2.25cm}
+\addtolength{\textwidth}{4.5cm}
+\addtolength{\voffset}{-2.5cm}
+\addtolength{\textheight}{5cm}
+\setlength{\parskip}{0pt}
+\setlength{\parindent}{15pt}
+
+\usepackage{amsthm}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage[spanish]{babel}
+\usepackage[colorlinks = true, linkcolor = black, citecolor = black, final]{hyperref}
+
+\usepackage{listings}
+\lstset{
+	language=Python,
+	backgroundcolor=\color{gray!25},
+	basicstyle=\small\ttfamily,
+	breaklines=true
+}
+
+\usepackage{graphicx}
+\usepackage{multicol}
+\usepackage{ marvosym }
+\usepackage{wasysym}
+\usepackage{tikz}
+\usetikzlibrary{patterns}
+
+\newcommand{\ds}{\displaystyle}
+\newcommand{\horrule}[1]{\rule{\linewidth}{#1}}
+
+\setlength{\parindent}{0in}
+
+\pagestyle{empty}
+\begin{document}
+	\hrule
+	\smallskip
+	\begin{center}
+		{\scshape {\large Redes de Computadoras} \\
+			Curso 2025-2026} \\ \smallskip
+		\textbf{Clase Práctica \# 7} \\
+		{\small \textbf{Tema:} Protocolos de capa de aplicación: DNS}
+	\end{center}
+	\vspace{-8px}
+	\rule{\linewidth}{2pt}
+	
+	{\scshape Facultad de Matemática y Computación}  \hfill {\scshape Universidad de La Habana}
+	
+	\bigskip\bigskip
+	
+	
+	
+	\vspace{1cm}
+	
+	\begin{center}
+		\textit{La única forma de hacer un gran trabajo es amar lo que haces.}
+	\end{center}
+	
+	\begin{flushright}
+		- Steve Jobs
+	\end{flushright}
+	
+	\vspace{1cm}
+	
+	% Ejercicios
+	\begin{enumerate}
+		
+		\thispagestyle{empty}
+		
+		%------------------------------------------------------------%
+		\item \textbf{\textit{Fase 1: Exploración rápida}}
+		
+		\medskip
+		Comando principal:
+		\begin{lstlisting}
+dig +trace www.example.com
+		\end{lstlisting}
+		\medskip \medskip
+		
+		\noindent \textbf{Conceptos clave::}
+
+		\begin{itemize}
+			
+		\item Raíz: conjunto de servidores que conoce ubicación de TLD; inicio del árbol.
+
+		\item TLD: delega hacia servidores autoritativos del dominio.
+
+		\item Autoritativo final: posee los registros definitivos del nombre consultado.
+
+		\item Secciones: ANSWER (respuesta directa), AUTHORITY (quién tiene autoridad), ADDITIONAL (datos extra como IP de NS) para facilitar siguiente salto.
+
+		\item RD/RA: diferencia entre petición de recursión y capacidad de ofrecerla.
+
+		\end{itemize}
+
+		\bigskip\bigskip
+		%------------------------------------------------------------%
+
+		%------------------------------------------------------------%
+		\item \textbf{\textit{ Fase 2: Captura y disección (Wireshark)}}
+		
+		\medskip
+		Pasos:
+		
+		\medskip \medskip
+
+		\begin{enumerate}
+		\item Abrir Wireshark y seleccionar interfaz con salida a Internet.
+		
+		\item Iniciar captura; aplicar filtro de visualización: dns (o udp.port==53 si se quiere ver sólo UDP clásico).
+
+		\item Ejecutar en terminal:
+		\begin{lstlisting}
+dig A example.com
+dig AAAA example.com
+dig TXT example.com
+		\end{lstlisting}
+		
+		\item Detener captura tras 3–4 segundos.
+
+		\item En un paquete de respuesta: expandir "Domain Name System (response)" y ubicar: Transaction ID, Flags (ver bits QR, AA, RD, RA), RCODE, Section Answers.
+
+		\item Repetir con otra consulta y comparar diferencias (por ejemplo presencia/ausencia de AAAA).
+		\end{enumerate}
+
+		\medskip \medskip
+		Marcar manualmente (notas): ID, QR, AA, RD, RA, RCODE de 3 respuestas distintas. Añadir columna en Wireshark (Click derecho sobre campo → "Apply as Column") para Transaction ID y RCODE facilita comparación.
+		\medskip \medskip
+		\noindent \textbf{Conceptos clave:}
+		\begin{itemize}
+			
+		\item ID: correlaciona consulta/respuesta.
+
+		\item QR: tipo de mensaje (0 consulta / 1 respuesta).
+
+		\item AA: confirma autoridad sobre la zona de la respuesta.
+
+		\item RD/RA: negociación de recursión.
+
+		\item RCODE: estado de la operación (NOERROR, NXDOMAIN). Permite rápida interpretación del resultado.
+
+		\item Filtro dns : muestra sólo tráfico relevante, reduciendo ruido y carga cognitiva.
+
+		\end{itemize}
+		
+		\bigskip\bigskip
+		%------------------------------------------------------------%
+
+		%------------------------------------------------------------%
+		\item \textbf{\textit{Fase 3: Servidor autoritativo mínimo}}
+		
+		\medskip
+		Docker rápido (ejemplo Bind9 simplificado):
+		\begin{lstlisting}
+docker run -d --name dns --hostname ns.grupoX.local -p 5353:53/udp -v $(pwd)/zone:/etc/bind
+ubuntu/bind9
+		\end{lstlisting}
+		\medskip \medskip
+	
+		Archivo de zona (ejemplo grupoX.local.zone ): incluir SOA + NS + registros: A (www), AAAA (www6), CNAME (alias -> www), MX (10 mail), TXT ("v=spf1 -all"), SRV (demo.tcp). Consultar:
+		\begin{lstlisting}
+dig @127.0.0.1 -p 5353 grupoX.local SOA
+dig @127.0.0.1 -p 5353 www.grupoX.local A
+		\end{lstlisting}
+		
+		\medskip \medskip
+		Repetir tras unos segundos para ver efecto de TTL en caché local.
+		
+		\medskip \medskip
+		\noindent \textbf{Conceptos clave:}
+		\begin{itemize}
+			
+		\item Archivo de zona: declaración de datos autoritativos.
+
+		\item TTL: límite de vigencia en cachés; su decremento muestra temporalidad
+
+		\item Diferencia autoridad vs caché: autoridad siempre devuelve valor completo; caché puede devolver mientras TTL > 0.
+
+		\item Tipos listados (A, AAAA, CNAME, MX, TXT, SRV) contextualizan diversidad sin exigir configuración completa.
+
+		\end{itemize}
+
+		\bigskip\bigskip
+		%------------------------------------------------------------%
+		
+		%------------------------------------------------------------%
+		\item \textbf{\textit{Fase 4: Cliente manual Python (mínimo)}}
+		
+		\medskip
+		Objetivo: Construir paquete DNS (header 12 bytes + question) y parsear respuestas A/AAAA/TXT.
+
+		\medskip \medskip
+		\noindent \textbf{Conceptos clave:}
+		\begin{enumerate}
+			
+		\item Empaquetar ID aleatorio, flags = 0x0100 (RD=1), QDCOUNT=1,
+
+		\item Codificar nombre en labels, QTYPE/QCLASS,
+
+		\item Enviar por UDP a resolver público (ej. 1.1.1.1),
+
+		\item Parsear header y contar answers.
+
+		\end{enumerate}
+
+		\medskip \medskip
+		\noindent \textbf{Conceptos clave:}
+		\begin{itemize}
+			
+		\item Header (12 bytes): estructura fija que identifica y clasifica la pregunta.
+
+		\item Labels codificados: longitud + texto + terminador 0x00 evita ambigüedad.
+
+		\item Flags mínimos: usar sólo RD simplifica; otros bits se exploran posteriormente.
+
+		\item QTYPE/QCLASS: definen qué se busca y el contexto (Internet).
+
+		\item Parseo parcial: suficiente para entender respuesta sin construir parser completo de RRs.
+
+		\end{itemize}
+
+		\bigskip\bigskip
+		%------------------------------------------------------------%
+
+	\end{enumerate}	
+
+\end{document}
